@@ -1,0 +1,54 @@
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+@using TicketSales.Models
+@using TicketSales.Services
+@using TicketSales.Data
+@inject IAdminMenuAuthorizationService MenuAuthorization
+@inject TicketDbContext TicketDb
+@{
+    var isAdminArea = string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Admin", StringComparison.OrdinalIgnoreCase);
+    var isAdminAuthenticated = isAdminArea && Context.User.Identity?.IsAuthenticated == true;
+    var adminMenuKeys = isAdminAuthenticated ? await MenuAuthorization.GetAccessibleKeysAsync(Context.User) : [];
+    var cart = JsonSerializer.Deserialize<List<CartItem>>(Context.Session.GetString("cart") ?? "[]") ?? [];
+    var tickets = cart.Sum(x => x.Quantity);
+    var isCustomerAuthenticated = !isAdminArea && Context.User.IsInRole(AdminIdentitySeed.CustomerRole);
+    var customerEmail = isCustomerAuthenticated ? Context.User.Identity?.Name ?? string.Empty : string.Empty;
+    var customerInitial = customerEmail.Length > 0 ? customerEmail[..1].ToUpperInvariant() : "U";
+    var checkoutToken = !isAdminArea ? Context.Session.GetString("checkout-token") : null;
+    var hasActiveReservation = checkoutToken is not null && await TicketDb.Orders.AsNoTracking()
+        .AnyAsync(order => order.PaymentAccessToken == checkoutToken && order.InventoryReserved && order.ReservationExpiresAt > DateTime.UtcNow);
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · VentaTickets</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="@(isAdminArea ? "admin-area" : "")">
+    @if (!isAdminArea)
+    {
+        <header class="site-header"><div class="container d-flex align-items-center justify-content-between"><a class="brand" asp-controller="Home" asp-action="Index"><span class="brand-mark">V</span>VentaTickets</a><nav class="main-nav"><a asp-controller="Home" asp-action="Index">Eventos</a>@if (hasActiveReservation) { <a class="header-reservation" asp-controller="Home" asp-action="Cart">◷ Entradas reservadas</a> }@if (isCustomerAuthenticated) { <div class="dropdown account-menu"><button type="button" class="account-chip account-chip-button dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Abrir menú de cuenta"><span class="account-avatar" aria-hidden="true">@customerInitial</span><span class="account-details"><small>MI CUENTA</small><strong>@customerEmail</strong></span></button><div class="dropdown-menu dropdown-menu-end account-dropdown"><a class="dropdown-item" asp-controller="Account" asp-action="Purchases">Mis compras</a><a class="dropdown-item" asp-controller="Account" asp-action="Profile">Mi cuenta</a><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="dropdown-item">Cerrar sesión</button></form></div></div> } else { <a asp-controller="Account" asp-action="Login">Iniciar sesión</a><a class="account-register" asp-controller="Account" asp-action="Register">Regístrate</a> }<a class="cart-link" asp-controller="Home" asp-action="Cart">Carrito <span class="cart-badge">@tickets</span></a></nav></div></header>
+    }
+    @if (isAdminAuthenticated)
+    {
+        <div class="admin-layout"><aside class="admin-sidebar"><a class="admin-brand" asp-controller="Admin" asp-action="Index"><span class="brand-mark">V</span><span>VentaTickets</span><small>ADMIN</small></a><nav class="admin-nav">@foreach (var option in AdminMenuOptions.All) { if (adminMenuKeys.Contains(option.Key)) { <a asp-controller="Admin" asp-action="@option.Action">@option.Title</a> } }</nav><div class="admin-sidebar-footer"><span>@Context.User.Identity?.Name</span><form asp-controller="Admin" asp-action="Logout" method="post"><button type="submit">Cerrar sesión</button></form></div></aside><main class="admin-content">@RenderBody()</main></div>
+    }
+    else
+    {
+        <main class="@(isAdminArea ? "admin-login-content" : "container page-content")">@RenderBody()</main>
+    }
+    @if (isAdminAuthenticated)
+    {
+        <div id="adminPageLoader" class="admin-page-loader" role="status" aria-live="polite"><div class="admin-loader-mark"><span class="admin-loader-ring"></span><span>Cargando</span></div></div>
+    }
+    @if (!isAdminArea) { <footer><div class="container">VentaTickets · Tu próxima experiencia empieza aquí.</div></footer> }
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script><script src="~/js/site.js" asp-append-version="true"></script><script>document.addEventListener('DOMContentLoaded', function () { document.querySelectorAll('.table-responsive .event-menu-button[data-bs-toggle="dropdown"]').forEach(button => bootstrap.Dropdown.getOrCreateInstance(button, { popperConfig: config => ({ ...config, strategy: 'fixed' }) })); });</script>
+    @if (isAdminAuthenticated)
+    {
+        <script>document.addEventListener('DOMContentLoaded', function () { const loader = document.getElementById('adminPageLoader'); const show = () => loader?.classList.add('is-visible'); const hide = () => loader?.classList.remove('is-visible'); requestAnimationFrame(hide); window.addEventListener('pageshow', hide); document.addEventListener('submit', event => { if (event.target instanceof HTMLFormElement && event.target.method.toLowerCase() !== 'get') show(); }); document.addEventListener('click', event => { const link = event.target.closest('a[href]'); if (!link || event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || link.target || link.getAttribute('href')?.startsWith('#')) return; show(); }); });</script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

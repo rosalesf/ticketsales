@@ -1,0 +1,50 @@
+@model TicketSales.Models.Order
+@{ ViewData["Title"] = Model.PaymentStatus == "Approved" ? "Compra confirmada" : "Pago no completado"; var approved = Model.PaymentStatus == "Approved"; var rejected = Model.PaymentStatus == "Rejected"; }
+
+@if (approved)
+{
+    <section class="email-style-confirmation">
+        <div class="email-style-header"><p>VENTATICKETS</p><h1>Tu compra está confirmada</h1></div>
+        <div class="email-style-body">
+            <p>Hola @Model.CustomerName,</p>
+            <p>Tu pago fue aprobado. Conserva esta información para identificar tu compra.</p>
+            <div class="email-order-reference"><strong>Orden: @Model.OrderNumber</strong><span>Referencia: @Model.PaymentReference</span></div>
+            <div class="email-order-items">@foreach (var item in Model.Items) { <div class="email-order-item"><span>@item.EventName <small>@item.TicketTypeName · @item.Quantity × Q @item.UnitPrice.ToString("N2")</small></span><strong>Q @((item.UnitPrice * item.Quantity).ToString("N2"))</strong></div> }</div>
+            <div class="email-order-total"><span>Total pagado</span><strong>Q @Model.Total.ToString("N2")</strong></div>
+            @if (ViewData["OrderQrCode"] is string qrCode)
+            {
+                <div class="email-style-qr"><img src="@qrCode" alt="Código QR cifrado de la orden @Model.OrderNumber" /><div><strong>Código de validación</strong><p>Presenta este código QR al ingresar al evento. Contiene un token cifrado asociado a tu orden.</p></div></div>
+            }
+            <p class="email-style-footer">@(Model.ConfirmationEmailSentAt is not null ? "La confirmación fue enviada a" : "Enviaremos la confirmación a") <strong>@Model.CustomerEmail</strong>. Gracias por comprar con VentaTickets.</p>
+            <a asp-action="Index" class="btn btn-dark">Descubrir más eventos</a>
+        </div>
+    </section>
+}
+else if (Model.PaymentStatus is "Pending" or "Rejected")
+{
+    <section class="checkout-card mx-auto" style="max-width:750px">
+        <h1>Tu compra todavía no está confirmada</h1>
+        <p id="payment-message" role="status">Estamos esperando la confirmación del pago. Si ya pagaste, no vuelvas a pagar.</p>
+        <p>Orden @Model.OrderNumber · Q @Model.Total.ToString("N2")</p>
+        <a class="btn btn-dark" asp-action="Pay" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Volver al formulario de pago</a>
+        <a id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Actualizar estado</a>
+        <div id="payment-tracker" data-status-url="@Url.Action("PaymentStatus", new { id = Model.Id, token = Model.PaymentAccessToken })"></div>
+    </section>
+}
+else if (Model.PaymentStatus is "Expired" or "Review")
+{
+    <section class="checkout-card mx-auto" style="max-width:750px">
+        <h1>@(Model.PaymentStatus == "Expired" ? "La reserva venció" : "Tu pago requiere revisión")</h1>
+        <p>@(Model.PaymentStatus == "Expired" ? "Las entradas reservadas fueron liberadas. Puedes revisar la disponibilidad y comenzar otra compra." : "Recibimos información de un cobro que requiere revisión. Conserva el número de orden y contacta a soporte antes de pagar nuevamente.")</p>
+        <p>Orden @Model.OrderNumber</p>
+        <a class="btn btn-dark" asp-action="Cart">Volver al carrito</a>
+    </section>
+}
+else
+{
+    <section class="payment-failed-page text-center"><div class="payment-failed-icon">×</div><p class="kicker">@(rejected ? "PAGO RECHAZADO" : "ERROR DE PAGO")</p><h1>@(rejected ? "No se aprobó tu pago" : "No pudimos procesar el pago")</h1><p class="payment-failed-lead">@(rejected ? "No se confirmó la compra y tus entradas siguen disponibles en el carrito." : "Ocurrió un problema temporal. Tu compra no fue confirmada y el carrito se mantiene intacto.")</p><div class="payment-failed-card text-start"><div><span>Estado</span><strong>@Model.PaymentStatus</strong></div><div><span>Referencia del intento</span><strong>@Model.PaymentReference</strong></div><small>Intento de pago: @Model.OrderNumber</small></div><a asp-action="Cart" class="btn btn-dark mt-4">Volver al carrito</a><p class="payment-help">Revisa tus datos e intenta nuevamente.</p></section>
+}
+@section Scripts {
+    <script src="~/js/recurrente-payment.js" asp-append-version="true"></script>
+}
+

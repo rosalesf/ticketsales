@@ -1,0 +1,35 @@
+@model TicketSales.Models.Event
+@{ ViewData["Title"] = Model.Name; var availableTypes = Model.TicketTypes.Where(t => t.AvailableTickets > 0).OrderBy(t => t.Price).ToList(); }
+<a class="back-link" asp-action="Index">← Volver a eventos</a>
+@if (TempData["Error"] is string error) { <div class="alert alert-danger mb-4">@error</div> }
+@if (!string.IsNullOrEmpty(Model.BannerBase64) && !string.IsNullOrEmpty(Model.BannerContentType))
+{
+    <div class="event-detail-banner"><img src="data:@Model.BannerContentType;base64,@Model.BannerBase64" alt="Banner de @Model.Name" /></div>
+}
+<section class="event-detail">
+    <div class="event-detail-info">
+        <p class="kicker">EVENTO</p>
+        <div class="event-date"><b>@Model.StartsAt.ToString("dd")</b><span>@Model.StartsAt.ToString("MMM")</span></div>
+        <h1>@Model.Name</h1>
+        <p class="intro">@Model.Description</p>
+        <dl class="event-meta"><dt>⌖</dt><dd>@Model.Venue</dd><dt>◷</dt><dd>@Model.StartsAt.ToString("dddd, dd 'de' MMMM 'a las' HH:mm")</dd></dl>
+    </div>
+    <aside class="ticket-picker">
+        <p class="kicker">ENTRADAS</p>
+        <h2>Elige tus tickets</h2>
+        @if (availableTypes.Any()) {
+            <form asp-action="AddToCart" method="post">
+                <input type="hidden" name="eventId" value="@Model.Id" />
+                <label class="form-label" for="ticketTypeId">Tipo de entrada</label>
+                <select id="ticketTypeId" name="ticketTypeId" class="form-select mb-3">
+                    @foreach (var type in availableTypes) { <option value="@type.Id">@type.Name · Q @type.Price.ToString("N2") (@type.AvailableTickets disponibles)</option> }
+                </select>
+                <label class="form-label" for="quantity">Cantidad</label>
+                <input id="quantity" name="quantity" class="form-control mb-3" type="number" value="1" min="1" max="@availableTypes.Max(t => t.AvailableTickets)" />
+                <button class="btn btn-dark w-100" type="submit">Añadir al carrito <span>→</span></button>
+            </form>
+        } else {
+            <p class="intro mb-0">Las entradas para este evento están agotadas.</p>
+        }
+    </aside>
+</section>

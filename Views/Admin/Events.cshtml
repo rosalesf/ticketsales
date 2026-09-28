@@ -1,0 +1,35 @@
+@model TicketSales.Models.Admin.EventListViewModel
+@{ ViewData["Title"] = "Eventos"; var pageSummary = Model.TotalItems == 0 ? "No hay eventos creados." : $"Mostrando {Model.FirstItem}–{Model.LastItem} de {Model.TotalItems} eventos"; }
+<section class="admin-page admin-events-page">
+    <div class="admin-heading d-flex justify-content-between align-items-start gap-3">
+        <div><p class="kicker">ADMINISTRACIÓN</p><h1>Eventos</h1><p>Gestiona la programación, disponibilidad y publicación de tus eventos.</p></div>
+        <a class="btn btn-dark" asp-action="CreateEvent">Nuevo evento</a>
+    </div>
+    @if (TempData["Success"] is string success) { <div class="notice mb-3">✓ @success</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+    <form class="event-list-filters" method="get" asp-action="Events"><div class="event-filter-search"><label for="search">Buscar por nombre</label><input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Ej. Festival Sabores" /></div><div><label for="startDate">Desde</label><input id="startDate" name="startDate" type="date" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-control" /></div><div><label for="endDate">Hasta</label><input id="endDate" name="endDate" type="date" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-control" /></div><button class="btn btn-dark" type="submit">Filtrar</button><a class="event-filter-clear" asp-action="Events">Limpiar</a></form>
+    <div class="event-table-shell">
+        <div class="event-table-summary"><span>@pageSummary</span><span class="event-table-page">Página @Model.Page de @Model.TotalPages</span></div>
+        <div class="table-responsive"><table class="table event-admin-table mb-0"><thead><tr><th>Evento</th><th>Fecha y hora</th><th>Lugar</th><th>Estado</th><th aria-label="Acciones"></th></tr></thead><tbody>
+        @if (!Model.Items.Any())
+        {
+            <tr><td colspan="5"><div class="event-table-empty"><span>✦</span><strong>Aún no hay eventos</strong><p>Crea el primero para comenzar a vender entradas.</p><a class="btn btn-dark btn-sm" asp-action="CreateEvent">Nuevo evento</a></div></td></tr>
+        }
+        @foreach (var item in Model.Items)
+        {
+            var statusClass = item.Status switch { EventStatuses.Published => "event-status-live", EventStatuses.Paused => "event-status-paused", EventStatuses.Cancelled => "event-status-cancelled", EventStatuses.Finished => "event-status-finished", _ => "event-status-draft" };
+            <tr>
+                <td><div class="event-row-title"><span class="event-row-mark">✦</span><div><strong>@item.Name</strong><small>@(item.Impulsar ? "Destacado" : "Evento regular")</small></div></div></td>
+                <td><span class="event-date">@item.StartsAt.ToString("dd MMM yyyy")</span><small>@item.StartsAt.ToString("HH:mm")</small></td>
+                <td><span class="event-venue">@item.Venue</span></td>
+                <td><span class="event-status @statusClass">@item.Status</span></td>
+                <td class="event-menu-cell"><div class="dropdown"><button class="event-menu-button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones para @item.Name">•••</button><div class="dropdown-menu dropdown-menu-end event-row-menu"><a class="dropdown-item" asp-action="EditEvent" asp-route-id="@item.Id">Editar evento</a><form asp-action="DeleteEvent" asp-route-id="@item.Id" method="post" onsubmit="return confirm('¿Eliminar el evento @item.Name? Esta acción no se puede deshacer.');"><button class="dropdown-item event-delete-action" type="submit">Eliminar evento</button></form></div></div></td>
+            </tr>
+        }
+        </tbody></table></div>
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="event-pagination" aria-label="Paginación de eventos"><a class="event-page-link @(Model.Page == 1 ? "is-disabled" : "")" asp-action="Events" asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" aria-disabled="@(Model.Page == 1)">← Anterior</a><div class="event-page-numbers">@for (var number = 1; number <= Model.TotalPages; number++) { <a class="@(number == Model.Page ? "is-current" : "")" asp-action="Events" asp-route-page="@number" asp-route-search="@Model.Search" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")">@number</a> }</div><a class="event-page-link @(Model.Page == Model.TotalPages ? "is-disabled" : "")" asp-action="Events" asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" aria-disabled="@(Model.Page == Model.TotalPages)">Siguiente →</a></nav>
+        }
+    </div>
+</section>

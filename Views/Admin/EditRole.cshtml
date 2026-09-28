@@ -1,0 +1,4 @@
+@model TicketSales.Models.Admin.EditRoleViewModel
+@{ ViewData["Title"] = "Editar rol"; }
+<section class="admin-auth"><div class="checkout-card"><p class="kicker">ADMINISTRACIÓN</p><h1>Editar rol</h1><form asp-action="EditRole" asp-route-id="@Model.Id" method="post"><input asp-for="Id" type="hidden" /><div asp-validation-summary="ModelOnly" class="alert alert-danger"></div><div class="mb-4"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" /><span asp-validation-for="Name" class="field-error"></span></div><button class="btn btn-dark">Guardar cambios</button> <a class="btn btn-light" asp-action="Roles">Cancelar</a></form></div></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

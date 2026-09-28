@@ -1,0 +1,41 @@
+@model TicketSales.Models.Order
+@inject IConfiguration Configuration
+@{ ViewData["Title"] = "Pago con tarjeta"; var reservationMinutes = Configuration.GetValue<int?>("Recurrente:ReservationMinutes") ?? 20; }
+@{ ViewData["PurchaseStep"] = 3; ViewData["PurchaseTitle"] = "Pago con tarjeta"; ViewData["PurchaseDescription"] = "Completa el pago para recibir tus entradas."; ViewData["PurchaseBackAction"] = "Checkout"; ViewData["PurchaseBackText"] = "Revisar datos"; }
+<div class="card-payment-page">
+    <partial name="_PurchaseFlowHeader" />
+    <div class="card-payment-grid">
+    <section class="card-payment-form" aria-labelledby="card-payment-title">
+        <div class="card-payment-form-heading"><span class="card-payment-step">03</span><div><h2 id="card-payment-title">Pago con tarjeta</h2><p id="payment-message" role="status" aria-live="polite">Completa tus datos en el formulario seguro.</p></div></div>
+    @if (ViewData["PaymentError"] is string error)
+    {
+        <p class="alert alert-warning">@error</p>
+        <a class="btn btn-dark" asp-action="Pay" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Volver a cargar</a>
+    }
+    @if (Model.RecurrenteCheckoutUrl is not null)
+    {
+        <div id="payment-frame-viewport" class="card-payment-viewport"><div id="recurrente-checkout-container" data-checkout-url="@Model.RecurrenteCheckoutUrl"></div></div>
+        <p class="card-payment-fallback">¿No ves el formulario? <a href="@Model.RecurrenteCheckoutUrl" rel="noreferrer">Abrir en Recurrente ↗</a></p>
+    }
+    </section>
+    <aside class="card-payment-summary" aria-labelledby="payment-summary-title">
+        <p class="kicker">TU EXPERIENCIA</p><h2 id="payment-summary-title">Resumen de compra</h2>
+        <div class="card-payment-items">
+        @foreach (var item in Model.Items)
+        {
+            <div class="card-payment-item"><div><strong>@item.EventName</strong><span>@item.TicketTypeName</span><small>@item.Quantity × Q @item.UnitPrice.ToString("N2")</small></div><b>Q @((item.UnitPrice * item.Quantity).ToString("N2"))</b></div>
+        }
+        </div>
+        <div class="card-payment-total"><span>Total a pagar<small>Quetzales · GTQ</small></span><strong>Q @Model.Total.ToString("N2")</strong></div>
+        <div class="card-payment-reservation"><span aria-hidden="true">◷</span><p><strong>Tus entradas están reservadas</strong>La reserva dura @reservationMinutes minutos desde que iniciaste el pago.</p></div>
+        <p class="card-payment-delivery">Después de confirmar el cobro recibirás tus entradas con QR por correo.</p>
+        <div class="card-payment-reference"><span>NÚMERO DE ORDEN</span><small>@Model.OrderNumber</small></div>
+        <a class="card-payment-status" id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Consultar el estado de mi compra <span aria-hidden="true">→</span></a>
+    </aside>
+    </div>
+    <div id="payment-tracker" data-status-url="@Url.Action("PaymentStatus", new { id = Model.Id, token = Model.PaymentAccessToken })"></div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/recurrente-checkout@@0.0.5/recurrente-checkout.js"></script>
+    <script src="~/js/recurrente-payment.js" asp-append-version="true"></script>
+}

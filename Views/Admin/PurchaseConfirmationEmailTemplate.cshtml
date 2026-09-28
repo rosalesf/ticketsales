@@ -1,0 +1,35 @@
+@model TicketSales.Models.Admin.PurchaseConfirmationEmailTemplateViewModel
+@{ ViewData["Title"] = "Correo de confirmación"; }
+<section class="admin-page email-template-page">
+    <div class="admin-heading"><div><p class="kicker">CONFIGURACIÓN</p><h1>Correo de confirmación de compra</h1><p>Personaliza el correo que recibe el cliente cuando su pago es aprobado.</p></div></div>
+    <form asp-action="PurchaseConfirmationEmailTemplate" method="post" id="emailTemplateForm">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <div class="template-tokens"><strong>Marcadores disponibles:</strong><button type="button" data-token="{{CustomerName}}">Cliente</button><button type="button" data-token="{{OrderNumber}}">Orden</button><button type="button" data-token="{{PaymentReference}}">Referencia</button><button type="button" data-token="{{OrderItems}}">Entradas</button><button type="button" data-token="{{Total}}">Total</button><button type="button" data-token="{{QrCode}}">Código QR</button></div>
+        <div class="template-tabs" role="tablist"><button type="button" class="active" data-mode="visual">Editor visual</button><button type="button" data-mode="html">HTML</button><button type="button" data-mode="preview">Vista previa</button></div>
+        <div class="template-editor-panel" data-panel="visual"><div class="template-toolbar"><button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="underline"><u>U</u></button><button type="button" data-command="insertUnorderedList">Lista</button><button type="button" data-command="createLink">Enlace</button><input type="color" id="textColor" value="#17201c" aria-label="Color del texto" /></div><div id="visualEditor" class="visual-email-editor" contenteditable="true" spellcheck="true"></div></div>
+        <div class="template-editor-panel d-none" data-panel="html"><textarea asp-for="Html" id="htmlEditor" class="form-control template-html" spellcheck="false"></textarea><span asp-validation-for="Html" class="field-error"></span></div>
+        <div class="template-editor-panel d-none" data-panel="preview"><iframe id="emailPreview" class="email-preview" sandbox title="Vista previa del correo"></iframe><p class="form-text">La vista previa usa ejemplos. El QR real se agrega al enviar el correo.</p></div>
+        <div class="mt-3 d-flex gap-2"><button class="btn btn-dark" type="submit">Guardar plantilla</button><button class="btn btn-outline-secondary" type="button" id="restoreDefault">Restaurar plantilla predeterminada</button></div>
+    </form>
+</section>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const html = document.getElementById('htmlEditor'), visual = document.getElementById('visualEditor'), preview = document.getElementById('emailPreview');
+            const sample = value => value.replaceAll('{{CustomerName}}', 'María López').replaceAll('{{OrderNumber}}', 'VT-2026-00001').replaceAll('{{PaymentReference}}', 'Pago aprobado').replaceAll('{{Total}}', 'Q 350.00').replaceAll('{{OrderItems}}', '<tr><td style="padding:12px 0;border-bottom:1px solid #ddd">Concierto · General × 2</td><td style="text-align:right">Q 350.00</td></tr>').replaceAll('{{QrCode}}', '<p style="padding:16px;background:#f4f5f0">El código QR se adjuntará al correo.</p>');
+            const syncToHtml = () => html.value = visual.innerHTML;
+            const syncToVisual = () => visual.innerHTML = html.value;
+            syncToVisual();
+            document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+                const mode = button.dataset.mode; if (mode === 'html') syncToHtml(); if (mode === 'visual') syncToVisual(); if (mode === 'preview') { syncToHtml(); preview.srcdoc = sample(html.value); }
+                document.querySelectorAll('[data-mode]').forEach(item => item.classList.toggle('active', item === button)); document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('d-none', panel.dataset.panel !== mode));
+            }));
+            document.querySelectorAll('[data-command]').forEach(button => button.addEventListener('click', () => { visual.focus(); if (button.dataset.command === 'createLink') { const url = prompt('URL del enlace:'); if (url) document.execCommand('createLink', false, url); } else document.execCommand(button.dataset.command, false); }));
+            document.getElementById('textColor').addEventListener('input', event => { visual.focus(); document.execCommand('foreColor', false, event.target.value); });
+            document.querySelectorAll('[data-token]').forEach(button => button.addEventListener('click', () => { const token = button.dataset.token; const selection = window.getSelection(); if (selection.rangeCount && visual.contains(selection.anchorNode)) document.execCommand('insertText', false, token); else { html.value += token; syncToVisual(); } }));
+            document.getElementById('emailTemplateForm').addEventListener('submit', syncToHtml);
+            document.getElementById('restoreDefault').addEventListener('click', () => { if (confirm('¿Restaurar la plantilla predeterminada? Se reemplazará el contenido actual.')) { html.value = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TicketSales.Services.PurchaseConfirmationEmailTemplateDefaults.Html)); syncToVisual(); } });
+        })();
+    </script>
+}

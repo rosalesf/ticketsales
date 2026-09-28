@@ -1,0 +1,18 @@
+@{
+    var step = ViewData["PurchaseStep"] as int? ?? 1;
+    var title = ViewData["PurchaseTitle"] as string ?? "Tu compra";
+    var description = ViewData["PurchaseDescription"] as string ?? string.Empty;
+    var backAction = ViewData["PurchaseBackAction"] as string;
+    var backText = ViewData["PurchaseBackText"] as string;
+}
+<header class="purchase-flow-header">
+    <div class="purchase-flow-copy">
+        @if (!string.IsNullOrWhiteSpace(backAction)) { <a class="back-link" asp-action="@backAction">← @backText</a> }
+        <p class="kicker">COMPRA SEGURA</p><h1>@title</h1><p>@description</p>
+    </div>
+    <ol class="purchase-flow-steps" aria-label="Progreso de compra">
+        <li class="@(step == 1 ? "is-current" : step > 1 ? "is-complete" : "")"><span>1</span>Carrito</li>
+        <li class="@(step == 2 ? "is-current" : step > 2 ? "is-complete" : "")"><span>2</span>Checkout</li>
+        <li class="@(step == 3 ? "is-current" : "")"><span>3</span>Pago</li>
+    </ol>
+</header>

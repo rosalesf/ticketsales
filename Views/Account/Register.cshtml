@@ -1,0 +1,30 @@
+@model TicketSales.Models.Account.RegisterViewModel
+@{ ViewData["Title"] = "Crear cuenta"; }
+<section class="account-auth">
+    <div class="checkout-card">
+        <p class="kicker">CUENTA</p>
+        <h1>Crea tu cuenta</h1>
+        <p class="intro">Guarda tus datos para próximas compras.</p>
+        <form asp-action="Register" method="post">
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" autocomplete="name" /><span asp-validation-for="FullName" class="field-error"></span></div>
+            <div class="mb-3"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" autocomplete="email" /><span asp-validation-for="Email" class="field-error"></span></div>
+            <div class="mb-3"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" autocomplete="tel" /><span asp-validation-for="Phone" class="field-error"></span></div>
+            <div class="mb-3">
+                <label asp-for="InvoiceType" class="form-label"></label>
+                <select asp-for="InvoiceType" class="form-select" id="invoiceType"><option value="CF">CF</option><option value="NIT">NIT</option></select>
+                <small class="text-muted">Los datos de facturación son opcionales.</small>
+            </div>
+            <div id="nitInvoiceFields" class="row g-3 mb-3" hidden>
+                <div class="col-md-5"><label asp-for="InvoiceNit" class="form-label"></label><input asp-for="InvoiceNit" class="form-control" /><span asp-validation-for="InvoiceNit" class="field-error"></span></div>
+                <div class="col-md-7"><label asp-for="InvoiceName" class="form-label"></label><input asp-for="InvoiceName" class="form-control" /><span asp-validation-for="InvoiceName" class="field-error"></span></div>
+            </div>
+            <div class="mb-3"><label asp-for="Password" class="form-label"></label><input asp-for="Password" class="form-control" autocomplete="new-password" /><small class="text-muted">Mínimo 12 caracteres, con mayúsculas, minúsculas y números.</small><span asp-validation-for="Password" class="field-error d-block"></span></div>
+            <div class="mb-4"><label asp-for="ConfirmPassword" class="form-label"></label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="field-error"></span></div>
+            <button class="btn btn-dark w-100">Crear cuenta</button>
+        </form>
+        <p class="account-switch">¿Ya tienes cuenta? <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">Inicia sesión</a></p>
+    </div>
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script>document.addEventListener('DOMContentLoaded', function () { const type = document.getElementById('invoiceType'); const fields = document.getElementById('nitInvoiceFields'); const update = () => fields.hidden = type.value !== 'NIT'; type.addEventListener('change', update); update(); });</script> }

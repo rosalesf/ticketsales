@@ -1,0 +1,28 @@
+@model TicketSales.Models.Admin.UserListViewModel
+@{ ViewData["Title"] = "Usuarios"; var pageSummary = Model.TotalItems == 0 ? "No hay usuarios que coincidan con los filtros." : $"Mostrando {Model.FirstItem}–{Model.LastItem} de {Model.TotalItems} usuarios"; var rolesSummary = Model.SelectedRoles.Count == 0 ? "Todos los roles" : $"{Model.SelectedRoles.Count} rol(es) seleccionado(s)"; }
+<section class="admin-page admin-users-page">
+    <div class="admin-heading d-flex justify-content-between align-items-start gap-3"><div><p class="kicker">ADMINISTRACIÓN</p><h1>Usuarios</h1><p>Administra las cuentas y sus permisos de acceso.</p></div><a class="btn btn-dark" asp-action="CreateUser">Crear usuario</a></div>
+    @if (TempData["Success"] is string success) { <div class="notice mb-3">✓ @success</div> } @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+    <form class="event-list-filters user-list-filters" method="get" asp-action="Users"><div class="event-filter-search"><label for="search">Buscar por nombre</label><input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Ej. Ana López" /></div><div class="user-role-filter"><label id="roles-label">Roles</label><details class="user-role-dropdown"><summary aria-labelledby="roles-label"><span>@rolesSummary</span><span aria-hidden="true">⌄</span></summary><div class="user-role-options">@foreach (var role in Model.AvailableRoles) { <label>@if (Model.SelectedRoles.Contains(role, StringComparer.OrdinalIgnoreCase)) { <input type="checkbox" name="roles" value="@role" checked /> } else { <input type="checkbox" name="roles" value="@role" /> }<span>@role</span></label> }</div></details></div><button class="btn btn-dark" type="submit">Filtrar</button><a class="event-filter-clear" asp-action="Users">Limpiar</a></form>
+    <div class="event-table-shell"><div class="event-table-summary"><span>@pageSummary</span><span class="event-table-page">Página @Model.Page de @Model.TotalPages</span></div><div class="table-responsive"><table class="table event-admin-table mb-0"><thead><tr><th>Usuario</th><th>Roles</th><th>Estado</th><th aria-label="Acciones"></th></tr></thead><tbody>
+    @if (!Model.Items.Any()) { <tr><td colspan="4"><div class="event-table-empty"><span>⌕</span><strong>No hay usuarios para mostrar</strong><p>Ajusta los filtros o crea una cuenta nueva.</p><a class="btn btn-dark btn-sm" asp-action="CreateUser">Crear usuario</a></div></td></tr> }
+    @foreach (var row in Model.Items) { var isLocked = row.User.LockoutEnd > DateTimeOffset.UtcNow; <tr><td><div class="user-row-title"><span class="user-row-mark">@((row.User.UserName ?? "?")[0].ToString().ToUpperInvariant())</span><div><strong>@row.User.UserName</strong><small>@(row.User.Email ?? "Sin correo registrado")</small></div></div></td><td><div class="user-role-badges">@foreach (var role in row.Roles) { <span>@role</span> }</div></td><td><span class="event-status @(isLocked ? "event-status-cancelled" : "event-status-live")">@(isLocked ? "Bloqueado" : "Activo")</span></td><td class="event-menu-cell"><div class="dropdown"><button class="event-menu-button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones para @row.User.UserName">•••</button><div class="dropdown-menu dropdown-menu-end event-row-menu"><a class="dropdown-item" asp-action="EditUser" asp-route-id="@row.User.Id">Editar usuario</a><form asp-action="DeleteUser" asp-route-id="@row.User.Id" method="post" onsubmit="return confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.');"><button class="dropdown-item event-delete-action" type="submit">Eliminar usuario</button></form></div></div></td></tr> }
+    </tbody></table></div>
+    @if (Model.TotalPages > 1) { <form class="event-pagination" method="get" asp-action="Users"><input type="hidden" name="search" value="@Model.Search" />@foreach (var role in Model.SelectedRoles) { <input type="hidden" name="roles" value="@role" /> }<button class="event-page-link @(Model.Page == 1 ? "is-disabled" : "")" type="submit" name="page" value="@(Model.Page - 1)" disabled="@(Model.Page == 1)">← Anterior</button><div class="event-page-numbers">@for (var number = 1; number <= Model.TotalPages; number++) { <button class="@(number == Model.Page ? "is-current" : "")" type="submit" name="page" value="@number">@number</button> }</div><button class="event-page-link @(Model.Page == Model.TotalPages ? "is-disabled" : "")" type="submit" name="page" value="@(Model.Page + 1)" disabled="@(Model.Page == Model.TotalPages)">Siguiente →</button></form> }
+    </div>
+</section>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropdown = document.querySelector('.user-role-dropdown');
+            if (!dropdown) return;
+            const summary = dropdown.querySelector('summary span');
+            const updateLabel = () => {
+                const selected = dropdown.querySelectorAll('input[type="checkbox"]:checked').length;
+                summary.textContent = selected === 0 ? 'Todos los roles' : `${selected} rol(es) seleccionado(s)`;
+            };
+            dropdown.addEventListener('change', updateLabel);
+            document.addEventListener('click', event => { if (!dropdown.contains(event.target)) dropdown.removeAttribute('open'); });
+        });
+    </script>
+}

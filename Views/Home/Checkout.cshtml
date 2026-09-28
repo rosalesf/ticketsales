@@ -1,0 +1,39 @@
+@model TicketSales.Models.CheckoutViewModel
+@{ ViewData["Title"] = "Pago"; var profileLocked = ViewData["ProfileLocked"] as bool? == true; }
+@{ ViewData["PurchaseStep"] = 2; ViewData["PurchaseTitle"] = "Información de cliente"; ViewData["PurchaseDescription"] = "Usaremos estos datos para confirmar y facturar tu compra."; ViewData["PurchaseBackAction"] = "Cart"; ViewData["PurchaseBackText"] = "Volver al carrito"; }
+<partial name="_PurchaseFlowHeader" />
+<div class="row g-4 align-items-start">
+    <section class="col-lg-7">
+        <div class="checkout-card">
+            <p class="kicker">CASI LISTO</p>
+            <h2>Confirma tus datos</h2>
+            <p class="intro">Usaremos estos datos para enviarte la confirmación de compra.</p>
+            @if (ViewData["PendingReservation"] as bool? == true) { <p class="alert alert-info">Tienes una reserva activa. Revisa tus datos y continúa con el pago cuando estés listo.</p> }
+            @if (profileLocked) { <p class="profile-note">✓ Datos cargados desde tu cuenta.</p> }
+            <form asp-action="Checkout" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                <div class="mb-3"><label asp-for="CustomerName" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.CustomerName" disabled /><input asp-for="CustomerName" type="hidden" /> } else { <input asp-for="CustomerName" class="form-control form-control-lg" autocomplete="name" /> }<span asp-validation-for="CustomerName" class="field-error"></span></div>
+                <div class="mb-3"><label asp-for="CustomerEmail" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.CustomerEmail" disabled /><input asp-for="CustomerEmail" type="hidden" /> } else { <input asp-for="CustomerEmail" class="form-control form-control-lg" autocomplete="email" /> }<span asp-validation-for="CustomerEmail" class="field-error"></span></div>
+                <div class="mb-3"><label asp-for="CustomerPhone" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.CustomerPhone" disabled /><input asp-for="CustomerPhone" type="hidden" /> } else { <input asp-for="CustomerPhone" class="form-control form-control-lg" autocomplete="tel" /> }<span asp-validation-for="CustomerPhone" class="field-error"></span></div>
+                <div class="mb-3">
+                    <label asp-for="InvoiceType" class="form-label"></label>
+                    @if (profileLocked) { <input class="form-control" value="@Model.InvoiceType" disabled /><input asp-for="InvoiceType" type="hidden" /> }
+                    else { <select asp-for="InvoiceType" class="form-select" id="invoiceType"><option value="CF">CF</option><option value="NIT">NIT</option></select> }
+                    <small class="text-muted">Los datos de facturación son opcionales.</small>
+                </div>
+                <div id="nitInvoiceFields" class="row g-3 mb-3" hidden>
+                    <div class="col-md-5"><label asp-for="InvoiceNit" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.InvoiceNit" disabled /><input asp-for="InvoiceNit" type="hidden" /> } else { <input asp-for="InvoiceNit" class="form-control" /> }<span asp-validation-for="InvoiceNit" class="field-error"></span></div>
+                    <div class="col-md-7"><label asp-for="InvoiceName" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.InvoiceName" disabled /><input asp-for="InvoiceName" type="hidden" /> } else { <input asp-for="InvoiceName" class="form-control" /> }<span asp-validation-for="InvoiceName" class="field-error"></span></div>
+                </div>
+                <input asp-for="CheckoutToken" type="hidden" />
+                <div class="form-check mb-3"><input asp-for="AcceptedTerms" class="form-check-input" /><label asp-for="AcceptedTerms" class="form-check-label">Acepto los términos y condiciones.</label><span asp-validation-for="AcceptedTerms" class="field-error d-block"></span></div>
+                @if (ViewData["PaymentsConfigured"] as bool? != true) { <p class="alert alert-info">Los pagos con tarjeta todavía no están disponibles. Intenta más tarde.</p> }
+                <div class="payment-method"><span class="method-icon">▣</span><div><strong>Pago seguro</strong><p>Pago con tarjeta procesado por Recurrente.</p></div><span class="method-check">✓</span></div>
+                <button class="btn btn-dark w-100 btn-lg mt-4" disabled="@(ViewData["PaymentsConfigured"] as bool? != true)">Confirmar y pagar Q @Model.Total.ToString("N2") <span>→</span></button>
+            </form>
+        </div>
+    </section>
+    <aside class="col-lg-5"><div class="order-summary"><p class="kicker">TU ORDEN</p>@foreach (var item in Model.Items) { <div class="summary-line"><span>@item.EventName · @item.TicketTypeName <small>× @item.Quantity</small></span><span>Q @item.Subtotal.ToString("N2")</span></div> }<div class="summary-total"><span>Total</span><strong>Q @Model.Total.ToString("N2")</strong></div><p class="secure-note">♢ El total se valida nuevamente contra la base de datos.</p></div></aside>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script>document.addEventListener('DOMContentLoaded', function () { const type = document.getElementById('invoiceType'); const fields = document.getElementById('nitInvoiceFields'); if (!type) { fields.hidden = '@Model.InvoiceType' !== 'NIT'; return; } const update = () => fields.hidden = type.value !== 'NIT'; type.addEventListener('change', update); update(); });</script> }
+
