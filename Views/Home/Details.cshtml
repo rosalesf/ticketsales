@@ -18,7 +18,7 @@
         <p class="kicker">ENTRADAS</p>
         <h2>Elige tus tickets</h2>
         @if (availableTypes.Any()) {
-            <form asp-action="AddToCart" method="post">
+            <form asp-action="AddToCart" method="post" data-purchase-loading="Agregando entradas">
                 <input type="hidden" name="eventId" value="@Model.Id" />
                 <label class="form-label" for="ticketTypeId">Tipo de entrada</label>
                 <select id="ticketTypeId" name="ticketTypeId" class="form-select mb-3">

@@ -9,5 +9,19 @@
 }
 else
 {
-    <div class="row g-4 align-items-start"><section class="col-lg-8"><div class="ticket-list">@foreach (var item in Model) { <article class="cart-item"><div class="cart-event-icon">✦</div><div class="cart-item-info"><h3>@item.EventName</h3><p>@item.TicketTypeName · Q @item.UnitPrice.ToString("N2") por persona</p>@if (reserved.TryGetValue(item.TicketTypeId, out var quantity)) { <small class="cart-reserved">✓ @quantity reservada(s) durante tu pago</small> }</div><form asp-action="UpdateCart" method="post" class="quantity-control"><input type="hidden" name="ticketTypeId" value="@item.TicketTypeId" /><button type="submit" name="quantity" value="@(item.Quantity - 1)" aria-label="Quitar una entrada">−</button><span>@item.Quantity</span><button type="submit" name="quantity" value="@(item.Quantity + 1)" aria-label="Añadir una entrada">+</button></form><strong class="cart-subtotal">Q @item.Subtotal.ToString("N2")</strong><form asp-action="UpdateCart" method="post" class="cart-remove-form"><input type="hidden" name="ticketTypeId" value="@item.TicketTypeId" /><button type="submit" name="quantity" value="0" class="cart-remove-button" aria-label="Eliminar todas las entradas de @item.TicketTypeName" title="Eliminar del carrito">🗑</button></form></article> }</div></section><aside class="col-lg-4"><div class="order-summary"><p class="kicker">RESUMEN</p><h2>Total de tu compra</h2><div class="summary-line"><span>@Model.Sum(x => x.Quantity) entrada(s)</span><span>Q @total.ToString("N2")</span></div><div class="summary-total"><span>Total</span><strong>Q @total.ToString("N2")</strong></div><a class="btn btn-dark w-100 btn-lg" asp-action="Checkout">Continuar al pago <span>→</span></a><p class="secure-note">♢ Compra protegida y confirmación al instante.</p></div></aside></div>
+    <div class="row g-4 align-items-start">
+        <section class="col-lg-8"><div class="ticket-list">
+            @foreach (var item in Model)
+            {
+                <article class="cart-item">
+                    <div class="cart-event-icon">✦</div>
+                    <div class="cart-item-info"><h3>@item.EventName</h3><p>@item.TicketTypeName · Q @item.UnitPrice.ToString("N2") por persona</p>@if (reserved.TryGetValue(item.TicketTypeId, out var quantity)) { <small class="cart-reserved">✓ @quantity reservada(s) durante tu pago</small> }</div>
+                    <form asp-action="UpdateCart" method="post" class="quantity-control" data-purchase-loading="Actualizando carrito"><input type="hidden" name="ticketTypeId" value="@item.TicketTypeId" /><button type="submit" name="quantity" value="@(item.Quantity - 1)" aria-label="Quitar una entrada">−</button><span>@item.Quantity</span><button type="submit" name="quantity" value="@(item.Quantity + 1)" aria-label="Añadir una entrada">+</button></form>
+                    <strong class="cart-subtotal">Q @item.Subtotal.ToString("N2")</strong>
+                    <form asp-action="UpdateCart" method="post" class="cart-remove-form" data-purchase-loading="Actualizando carrito"><input type="hidden" name="ticketTypeId" value="@item.TicketTypeId" /><button type="submit" name="quantity" value="0" class="cart-remove-button" aria-label="Eliminar todas las entradas de @item.TicketTypeName" title="Eliminar del carrito">🗑</button></form>
+                </article>
+            }
+        </div></section>
+        <aside class="col-lg-4"><div class="order-summary"><p class="kicker">RESUMEN</p><h2>Total de tu compra</h2><div class="summary-line"><span>@Model.Sum(x => x.Quantity) entrada(s)</span><span>Q @total.ToString("N2")</span></div><div class="summary-total"><span>Total</span><strong>Q @total.ToString("N2")</strong></div><a class="btn btn-dark w-100 btn-lg" asp-action="Checkout" data-purchase-loading="Preparando checkout">Continuar al pago <span>→</span></a><p class="secure-note">♢ Compra protegida y confirmación al instante.</p></div></aside>
+    </div>
 }

@@ -14,7 +14,7 @@ using TicketSales.Services;
 namespace TicketSales.Controllers;
 
 [Route("admin")]
-public class AdminController(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<IdentityUser> signInManager, AdminIdentityDbContext identityDb, TicketDbContext ticketDb, IAdminMenuAuthorizationService menuAuthorization) : Controller
+public class AdminController(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<IdentityUser> signInManager, AdminIdentityDbContext identityDb, TicketDbContext ticketDb, IAdminMenuAuthorizationService menuAuthorization, TicketSales.Services.IPersonalDataProtector personalDataProtector) : Controller
 {
     [AllowAnonymous, HttpGet("login")]
     public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl });
@@ -197,6 +197,43 @@ public class AdminController(UserManager<IdentityUser> userManager, RoleManager<
         await ticketDb.SaveChangesAsync();
         TempData["Success"] = "Plantilla de correo actualizada. Se usará en las próximas compras confirmadas.";
         return RedirectToAction(nameof(PurchaseConfirmationEmailTemplate));
+    }
+
+    [Authorize, HttpGet("ticket-scanner")]
+    public async Task<IActionResult> TicketScanner()
+    {
+        if (!await menuAuthorization.HasAccessAsync(User, AdminMenuOptions.TicketScanner)) return Forbid();
+        return View();
+    }
+
+    [Authorize, HttpPost("ticket-scanner/lookup"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> LookupTicket([FromForm] string qr)
+    {
+        if (!await menuAuthorization.HasAccessAsync(User, AdminMenuOptions.TicketScanner)) return Forbid();
+        if (!TryReadTicket(qr, out var itemId, out var number)) return BadRequest(new { message = "El código QR no es válido." });
+        var item = await ticketDb.OrderItems.Include(x => x.Order).AsNoTracking().FirstOrDefaultAsync(x => x.Id == itemId);
+        if (item is null || item.Order.PaymentStatus != "Approved" || number > item.Quantity) return NotFound(new { message = "La entrada no existe o no está confirmada." });
+        var ticket = await ticketDb.AdmissionTickets.AsNoTracking().FirstOrDefaultAsync(x => x.OrderItemId == itemId && x.TicketNumber == number);
+        return Json(new { orderItemId = itemId, number, order = item.Order.OrderNumber, item.EventName, locality = item.TicketTypeName, used = ticket?.UsedAt is not null, usedAt = ticket?.UsedAt?.ToLocalTime().ToString("g") });
+    }
+
+    [Authorize, HttpPost("ticket-scanner/use"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> UseTicket([FromForm] string qr, CancellationToken cancellationToken)
+    {
+        if (!await menuAuthorization.HasAccessAsync(User, AdminMenuOptions.TicketScanner)) return Forbid();
+        if (!TryReadTicket(qr, out var itemId, out var number)) return BadRequest(new { message = "El código QR no es válido." });
+        await using var transaction = await PaymentOrderService.LockAsync(ticketDb, $"admission:{itemId}:{number}", cancellationToken);
+        var item = await ticketDb.OrderItems.Include(x => x.Order).SingleOrDefaultAsync(x => x.Id == itemId, cancellationToken);
+        if (item is null || item.Order.PaymentStatus != "Approved" || number > item.Quantity) return NotFound(new { message = "La entrada no existe o no está confirmada." });
+        var ticket = await ticketDb.AdmissionTickets.SingleOrDefaultAsync(x => x.OrderItemId == itemId && x.TicketNumber == number, cancellationToken);
+        if (ticket?.UsedAt is not null) return Conflict(new { message = "Este QR ya fue utilizado.", usedAt = ticket.UsedAt.Value.ToLocalTime().ToString("g") });
+        ticket ??= new AdmissionTicket { OrderItemId = itemId, TicketNumber = number };
+        if (ticket.Id == 0) ticketDb.AdmissionTickets.Add(ticket);
+        ticket.UsedAt = DateTime.UtcNow;
+        ticket.UsedBy = User.Identity?.Name;
+        await ticketDb.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Json(new { message = "Entrada utilizada correctamente.", eventName = item.EventName, locality = item.TicketTypeName });
     }
 
 
@@ -497,5 +534,16 @@ public class AdminController(UserManager<IdentityUser> userManager, RoleManager<
         catch (ExternalException) { return source; }
 #pragma warning restore CA1416
     }
+    private bool TryReadTicket(string qr, out int itemId, out int number)
+    {
+        itemId = number = 0;
+        try
+        {
+            var parts = personalDataProtector.Unprotect(qr.Trim()).Split(':');
+            return parts.Length == 3 && int.TryParse(parts[1], out itemId) && int.TryParse(parts[2], out number) && itemId > 0 && number > 0;
+        }
+        catch (System.Security.Cryptography.CryptographicException) { return false; }
+    }
+
     private static bool IsProtectedRole(string? role) => role is AdminIdentitySeed.SuperAdminRole or AdminIdentitySeed.CustomerRole;
 }

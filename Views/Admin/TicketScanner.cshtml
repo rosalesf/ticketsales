@@ -1,0 +1,58 @@
+@{ ViewData["Title"] = "Validar entradas"; }
+<section class="admin-page ticket-scanner-page">
+    <form id="scannerToken">@Html.AntiForgeryToken()</form>
+    <div class="admin-heading"><div><p class="kicker">ACCESO AL EVENTO</p><h1>Validar entradas</h1></div></div>
+    <div class="ticket-scanner-card">
+        <div id="ticketResult" class="ticket-scan-result" hidden></div>
+        <div id="scannerVideo" class="ticket-scanner-video"></div>
+    </div>
+</section>
+@section Scripts {
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(() => {
+    const result = document.getElementById('ticketResult');
+    const camera = document.getElementById('scannerVideo');
+    const token = document.querySelector('#scannerToken input[name="__RequestVerificationToken"]').value;
+    let current = '', scanner, scanning = false;
+    const post = async url => {
+        const body = new URLSearchParams({ qr: current, __RequestVerificationToken: token });
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+        return { response, data: await response.json() };
+    };
+    const backButton = '<button id="scanAgain" type="button" class="btn btn-outline-dark mt-2">← Volver a escanear</button>';
+    const show = html => { result.hidden = false; result.innerHTML = html + backButton; document.getElementById('scanAgain').addEventListener('click', startCamera); };
+    const startCamera = async () => {
+        if (scanning) return;
+        if (!window.isSecureContext) { show('<div class="alert alert-warning">Abre este portal con HTTPS para permitir el uso de cámara.</div>'); return; }
+        if (!window.Html5Qrcode) { show('<div class="alert alert-danger">No se pudo cargar el lector de cámara.</div>'); return; }
+        result.hidden = true;
+        scanner ??= new Html5Qrcode('scannerVideo');
+        try {
+            scanning = true;
+            await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, async text => {
+                if (!scanning) return;
+                scanning = false;
+                await scanner.stop();
+                current = text;
+                lookup();
+            });
+        } catch {
+            scanning = false;
+            show('<div class="alert alert-danger">No se pudo abrir la cámara. Revisa el permiso del navegador.</div>');
+        }
+    };
+    const lookup = async () => {
+        const { response, data } = await post('@Url.Action("LookupTicket")');
+        if (!response.ok) { show(`<div class="alert alert-danger">${data.message}</div>`); return; }
+        show(`<h3>${data.eventName}</h3><p><strong>${data.locality}</strong> · Entrada ${data.number}<br>Orden: ${data.order}</p>${data.used ? `<div class="alert alert-danger">Este QR ya fue utilizado${data.usedAt ? ` el ${data.usedAt}` : ''}.</div>` : '<button id="useTicket" class="btn btn-dark">Utilizar</button>'}`);
+        document.getElementById('useTicket')?.addEventListener('click', use);
+    };
+    const use = async () => {
+        const { response, data } = await post('@Url.Action("UseTicket")');
+        show(`<div class="alert ${response.ok ? 'alert-success' : 'alert-danger'}">${data.message}${data.usedAt ? ` ${data.usedAt}` : ''}</div>`);
+    };
+    startCamera();
+})();
+</script>
+}

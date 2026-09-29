@@ -25,6 +25,8 @@
     <title>@ViewData["Title"] · VentaTickets</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/purchase-loader.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ticket-scanner.css" asp-append-version="true" />
 </head>
 <body class="@(isAdminArea ? "admin-area" : "")">
     @if (!isAdminArea)
@@ -38,6 +40,10 @@
     else
     {
         <main class="@(isAdminArea ? "admin-login-content" : "container page-content")">@RenderBody()</main>
+    }
+    @if (!isAdminArea)
+    {
+        <div id="purchasePageLoader" class="purchase-page-loader" role="status" aria-live="assertive" aria-hidden="true"><div class="purchase-loader-mark"><span class="purchase-loader-ring" aria-hidden="true"></span><strong id="purchaseLoaderMessage">Procesando</strong><small>Por favor espera…</small></div></div>
     }
     @if (isAdminAuthenticated)
     {

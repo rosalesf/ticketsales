@@ -10,7 +10,7 @@
             <p class="intro">Usaremos estos datos para enviarte la confirmación de compra.</p>
             @if (ViewData["PendingReservation"] as bool? == true) { <p class="alert alert-info">Tienes una reserva activa. Revisa tus datos y continúa con el pago cuando estés listo.</p> }
             @if (profileLocked) { <p class="profile-note">✓ Datos cargados desde tu cuenta.</p> }
-            <form asp-action="Checkout" method="post">
+            <form asp-action="Checkout" method="post" data-purchase-loading="Preparando pago seguro">
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
                 <div class="mb-3"><label asp-for="CustomerName" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.CustomerName" disabled /><input asp-for="CustomerName" type="hidden" /> } else { <input asp-for="CustomerName" class="form-control form-control-lg" autocomplete="name" /> }<span asp-validation-for="CustomerName" class="field-error"></span></div>
                 <div class="mb-3"><label asp-for="CustomerEmail" class="form-label"></label>@if (profileLocked) { <input class="form-control" value="@Model.CustomerEmail" disabled /><input asp-for="CustomerEmail" type="hidden" /> } else { <input asp-for="CustomerEmail" class="form-control form-control-lg" autocomplete="email" /> }<span asp-validation-for="CustomerEmail" class="field-error"></span></div>

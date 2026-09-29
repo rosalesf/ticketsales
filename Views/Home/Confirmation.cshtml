@@ -11,9 +11,12 @@
             <div class="email-order-reference"><strong>Orden: @Model.OrderNumber</strong><span>Referencia: @Model.PaymentReference</span></div>
             <div class="email-order-items">@foreach (var item in Model.Items) { <div class="email-order-item"><span>@item.EventName <small>@item.TicketTypeName · @item.Quantity × Q @item.UnitPrice.ToString("N2")</small></span><strong>Q @((item.UnitPrice * item.Quantity).ToString("N2"))</strong></div> }</div>
             <div class="email-order-total"><span>Total pagado</span><strong>Q @Model.Total.ToString("N2")</strong></div>
-            @if (ViewData["OrderQrCode"] is string qrCode)
+            @if (ViewData["TicketQrCodes"] is TicketQrCode[] ticketQrCodes)
             {
-                <div class="email-style-qr"><img src="@qrCode" alt="Código QR cifrado de la orden @Model.OrderNumber" /><div><strong>Código de validación</strong><p>Presenta este código QR al ingresar al evento. Contiene un token cifrado asociado a tu orden.</p></div></div>
+                @foreach (var ticket in ticketQrCodes)
+                {
+                    <div class="email-style-qr"><img src="@ticket.DataUri" alt="Código QR para @ticket.Item.TicketTypeName, entrada @ticket.Number" /><div><strong>@ticket.Item.EventName · @ticket.Item.TicketTypeName</strong><p>Entrada @ticket.Number de @ticket.Item.Quantity. Presenta este código QR al ingresar al evento.</p></div></div>
+                }
             }
             <p class="email-style-footer">@(Model.ConfirmationEmailSentAt is not null ? "La confirmación fue enviada a" : "Enviaremos la confirmación a") <strong>@Model.CustomerEmail</strong>. Gracias por comprar con VentaTickets.</p>
             <a asp-action="Index" class="btn btn-dark">Descubrir más eventos</a>
@@ -27,7 +30,7 @@ else if (Model.PaymentStatus is "Pending" or "Rejected")
         <p id="payment-message" role="status">Estamos esperando la confirmación del pago. Si ya pagaste, no vuelvas a pagar.</p>
         <p>Orden @Model.OrderNumber · Q @Model.Total.ToString("N2")</p>
         <a class="btn btn-dark" asp-action="Pay" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Volver al formulario de pago</a>
-        <a id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Actualizar estado</a>
+        <a id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken" data-purchase-loading="Verificando pago">Actualizar estado</a>
         <div id="payment-tracker" data-status-url="@Url.Action("PaymentStatus", new { id = Model.Id, token = Model.PaymentAccessToken })"></div>
     </section>
 }

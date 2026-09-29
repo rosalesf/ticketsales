@@ -10,6 +10,7 @@ public class TicketDbContext(DbContextOptions<TicketDbContext> options) : DbCont
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<TicketType> TicketTypes => Set<TicketType>();
     public DbSet<PurchaseConfirmationEmailTemplate> PurchaseConfirmationEmailTemplates => Set<PurchaseConfirmationEmailTemplate>();
+    public DbSet<AdmissionTicket> AdmissionTickets => Set<AdmissionTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,5 +22,6 @@ public class TicketDbContext(DbContextOptions<TicketDbContext> options) : DbCont
             .HasIndex(x => x.CustomerUserId);
         modelBuilder.Entity<Order>().HasIndex(x => x.PaymentAccessToken).IsUnique().HasFilter("[PaymentAccessToken] IS NOT NULL");
         modelBuilder.Entity<Order>().HasIndex(x => x.RecurrenteCheckoutId).IsUnique().HasFilter("[RecurrenteCheckoutId] IS NOT NULL");
+        modelBuilder.Entity<AdmissionTicket>().HasIndex(x => new { x.OrderItemId, x.TicketNumber }).IsUnique();
     }
 }

@@ -30,7 +30,7 @@
         <div class="card-payment-reservation"><span aria-hidden="true">◷</span><p><strong>Tus entradas están reservadas</strong>La reserva dura @reservationMinutes minutos desde que iniciaste el pago.</p></div>
         <p class="card-payment-delivery">Después de confirmar el cobro recibirás tus entradas con QR por correo.</p>
         <div class="card-payment-reference"><span>NÚMERO DE ORDEN</span><small>@Model.OrderNumber</small></div>
-        <a class="card-payment-status" id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken">Consultar el estado de mi compra <span aria-hidden="true">→</span></a>
+        <a class="card-payment-status" id="payment-confirmation" asp-action="Confirmation" asp-route-id="@Model.Id" asp-route-token="@Model.PaymentAccessToken" data-purchase-loading="Verificando pago">Consultar el estado de mi compra <span aria-hidden="true">→</span></a>
     </aside>
     </div>
     <div id="payment-tracker" data-status-url="@Url.Action("PaymentStatus", new { id = Model.Id, token = Model.PaymentAccessToken })"></div>

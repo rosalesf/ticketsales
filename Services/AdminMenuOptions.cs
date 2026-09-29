@@ -10,6 +10,7 @@ public static class AdminMenuOptions
     public const string Events = "events";
     public const string MenuSecurity = "menu-security";
     public const string EmailTemplate = "email-template";
+    public const string TicketScanner = "ticket-scanner";
 
     public static readonly IReadOnlyList<AdminMenuOption> All =
     [
@@ -17,6 +18,7 @@ public static class AdminMenuOptions
         new(Users, "Usuarios", "Users"),
         new(Roles, "Roles", "Roles"),
         new(Events, "Eventos", "Events"),
+        new(TicketScanner, "Validar entradas", "TicketScanner"),
         new(EmailTemplate, "Correo de confirmación", "PurchaseConfirmationEmailTemplate"),
         new(MenuSecurity, "Seguridad de menú", "MenuSecurity")
     ];

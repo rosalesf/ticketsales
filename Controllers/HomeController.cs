@@ -197,11 +197,15 @@ public class HomeController(TicketDbContext db, AdminIdentityDbContext identityD
     }
 
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> PaymentReturn(string token)
+    public async Task<IActionResult> PaymentReturn(string token, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(token)) return NotFound();
         var id = await db.Orders.Where(o => o.PaymentAccessToken == token).Select(o => (int?)o.Id).SingleOrDefaultAsync();
-        return id is null ? NotFound() : RedirectToAction(nameof(Confirmation), new { id, token });
+        if (id is null) return NotFound();
+
+        // The browser return is a useful fallback when the webhook is delayed or unavailable.
+        await payments.SynchronizeAsync(id.Value, cancellationToken);
+        return RedirectToAction(nameof(Confirmation), new { id, token });
     }
 
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -217,10 +221,15 @@ public class HomeController(TicketDbContext db, AdminIdentityDbContext identityD
     }
 
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> PaymentStatus(int id, string? token)
+    public async Task<IActionResult> PaymentStatus(int id, string? token, CancellationToken cancellationToken)
     {
         var order = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id);
         if (order is null || !CanAccess(order, token)) return NotFound();
+
+        // Do not rely exclusively on the asynchronous webhook: the payment page polls this
+        // endpoint after Recurrente reports success, so reconcile the provider's current state.
+        await payments.SynchronizeAsync(id, cancellationToken);
+        order = await db.Orders.AsNoTracking().SingleAsync(o => o.Id == id, cancellationToken);
         return Json(new { status = order.PaymentStatus });
     }
 
@@ -241,6 +250,8 @@ public class HomeController(TicketDbContext db, AdminIdentityDbContext identityD
         var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id);
         if (order is null || !CanAccess(order, token)) return NotFound();
         Response.Headers["Referrer-Policy"] = "no-referrer";
+        await payments.SynchronizeAsync(id, default);
+        order = await db.Orders.Include(o => o.Items).SingleAsync(o => o.Id == id);
         if (order.PaymentStatus == "Approved" && HttpContext.Session.GetString("checkout-token") == order.PaymentAccessToken)
         {
             var cart = GetCart();
@@ -255,7 +266,13 @@ public class HomeController(TicketDbContext db, AdminIdentityDbContext identityD
         order.CustomerName = personalDataProtector.Unprotect(order.CustomerName);
         order.CustomerEmail = personalDataProtector.Unprotect(order.CustomerEmail);
         order.CustomerPhone = personalDataProtector.Unprotect(order.CustomerPhone);
-        if (order.PaymentStatus == "Approved") ViewData["OrderQrCode"] = orderQrCodeGenerator.GenerateDataUri(order);
+        if (order.PaymentStatus == "Approved")
+        {
+            ViewData["TicketQrCodes"] = order.Items.OrderBy(item => item.Id)
+                .SelectMany(item => Enumerable.Range(1, item.Quantity)
+                    .Select(number => new TicketQrCode(item, number, orderQrCodeGenerator.GenerateDataUri(order, item, number))))
+                .ToArray();
+        }
         return View(order);
     }
 
@@ -284,6 +301,7 @@ public class HomeController(TicketDbContext db, AdminIdentityDbContext identityD
     private static string CreateOrderNumber() => $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
     private List<CartItem> GetCart() => JsonSerializer.Deserialize<List<CartItem>>(HttpContext.Session.GetString(CartKey) ?? "[]") ?? [];
     private void SaveCart(List<CartItem> cart) => HttpContext.Session.SetString(CartKey, JsonSerializer.Serialize(cart));
+
 }
 
 

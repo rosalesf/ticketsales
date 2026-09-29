@@ -26,6 +26,7 @@ public static class AdminIdentitySeed
             if (!existingPermissions.Contains(AdminMenuOptions.Dashboard)) db.AdminMenuPermissions.Add(new AdminMenuPermission { RoleId = administrator.Id, MenuKey = AdminMenuOptions.Dashboard });
             if (!existingPermissions.Contains(AdminMenuOptions.Events)) db.AdminMenuPermissions.Add(new AdminMenuPermission { RoleId = administrator.Id, MenuKey = AdminMenuOptions.Events });
             if (!existingPermissions.Contains(AdminMenuOptions.EmailTemplate)) db.AdminMenuPermissions.Add(new AdminMenuPermission { RoleId = administrator.Id, MenuKey = AdminMenuOptions.EmailTemplate });
+            if (!existingPermissions.Contains(AdminMenuOptions.TicketScanner)) db.AdminMenuPermissions.Add(new AdminMenuPermission { RoleId = administrator.Id, MenuKey = AdminMenuOptions.TicketScanner });
             if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
         }
 

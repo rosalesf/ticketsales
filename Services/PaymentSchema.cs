@@ -22,6 +22,10 @@ public static class PaymentSchema
             ALTER TABLE dbo.Orders ADD InventoryReserved BIT NOT NULL CONSTRAINT DF_Orders_InventoryReserved DEFAULT 0;
         IF COL_LENGTH(N'dbo.Orders', N'ConfirmationEmailSentAt') IS NULL
             ALTER TABLE dbo.Orders ADD ConfirmationEmailSentAt DATETIME2 NULL;
+        IF OBJECT_ID(N'dbo.AdmissionTickets', N'U') IS NULL
+            CREATE TABLE dbo.AdmissionTickets (Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_AdmissionTickets PRIMARY KEY, OrderItemId INT NOT NULL, TicketNumber INT NOT NULL, UsedAt DATETIME2 NULL, UsedBy NVARCHAR(256) NULL, CONSTRAINT FK_AdmissionTickets_OrderItems FOREIGN KEY (OrderItemId) REFERENCES dbo.OrderItems(Id) ON DELETE CASCADE);
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_AdmissionTickets_OrderItemId_TicketNumber' AND object_id = OBJECT_ID(N'dbo.AdmissionTickets'))
+            CREATE UNIQUE INDEX UX_AdmissionTickets_OrderItemId_TicketNumber ON dbo.AdmissionTickets(OrderItemId, TicketNumber);
         IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Orders_PaymentAccessToken' AND object_id = OBJECT_ID(N'dbo.Orders'))
             EXEC(N'CREATE UNIQUE INDEX IX_Orders_PaymentAccessToken ON dbo.Orders(PaymentAccessToken) WHERE PaymentAccessToken IS NOT NULL');
         IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Orders_RecurrenteCheckoutId' AND object_id = OBJECT_ID(N'dbo.Orders'))
